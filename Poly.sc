@@ -88,8 +88,12 @@ Poly {
 	
 	createGUI {
 		var addButton;
+		var labelBoxRect;
+		var divisionLabel;
+		var numberLabel;
 		var divisionBox;
 		var numberBox;
+		var buttonFlowLayout;
 		
 		sBounds = Window.screenBounds;
 		channelWidth = 50;
@@ -104,14 +108,23 @@ Poly {
 		window = Window.new("Poly", guiRect);
 		faderContainer = CompositeView(window, faderContRect);
 		buttonContainer = CompositeView(window, buttonsContRect);
+		buttonFlowLayout = buttonContainer.addFlowLayout;
 		
-		addButton = Button(buttonContainer, Rect(buttonHeight/2,buttonHeight/2,buttonHeight,buttonHeight));
+		labelBoxRect = Rect(0,0,80,20);
+		divisionLabel = StaticText(buttonContainer, labelBoxRect).string = "Beat Division";
+		divisionBox = NumberBox(buttonContainer, labelBoxRect);
+		numberLabel = StaticText(buttonContainer, labelBoxRect).string = "Sub-Divisions";
+		numberBox = NumberBox(buttonContainer, labelBoxRect);
+		buttonFlowLayout.nextLine;
+		buttonFlowLayout.nextLine;
+		addButton = Button(buttonContainer, Rect(0,0,buttonHeight,buttonHeight));
 		addButton.states_([["Add", Color.white, Color.black]]);
 		addButton.action_({ 
 			this.addGUIChannel(4,3);
 		});
 						
 		window.front;
+
 	}
 	
 	addGUIChannel {|division, number|
