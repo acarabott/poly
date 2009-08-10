@@ -1,7 +1,8 @@
 Poly {
 	
 	var <>tempo;
-
+	
+	var <>currentIndex;
 	var <>rhythms;
 	var <>freqs;
 	var <>amps;
@@ -18,7 +19,6 @@ Poly {
 	var <>channelHeight;
 	var <>initialGUIWidth;
 	var <>buttonHeight;
-	var <>nextChannelX;
 	
 	*initClass {
 		SynthDef(\polyBeep) { |freq=440, amp=0.1, out=0|
@@ -38,6 +38,8 @@ Poly {
 	}
 
 	init { 
+		currentIndex = 0;
+		Post << "INIT currentIndex: " <<  currentIndex << "\n"; 
 		rhythms = List[];
 		freqs = List[];
 		amps = List[];
@@ -46,7 +48,7 @@ Poly {
 		this.createGUI;
 	}
 	
-	addRhythm {|index, aDivision, aValue|
+	addRhythm {|aIndex, aDivision, aValue|
 		var ret;
 		var beat;
 
@@ -55,13 +57,15 @@ Poly {
 		beat = (tempo/aDivision)*aValue;
 		ret = Routine {
 			inf.do {
-				Synth(\polyBeep, [\freq, freqs[index], \amp, amps[index]]);
+				Synth(\polyBeep, [\freq, freqs[aIndex], \amp, amps[aIndex]]);
 				beat.wait
 			}
 		};
 		rhythms.add(ret);
+		Post << "ADD RHYTHM currentIndex: " <<  currentIndex << "\n"; 
 		
-		this.addGUIChannel(aDivision, aValue);
+		this.addGUIChannel(currentIndex, aDivision, aValue);
+		currentIndex = currentIndex + 1;
 	}
 	
 	play {
@@ -79,12 +83,9 @@ Poly {
 		};
 	}
 	
-	clearAll {
-		rhythms = List[];
-		freqs = List[];
-		amps = List[];
+	removeRhythm {|index|
+		
 	}
-	
 	
 	createGUI {
 		var addButton;
@@ -100,7 +101,6 @@ Poly {
 		channelHeight = 400;
 		buttonHeight = 50;
 		initialGUIWidth = channelWidth * 5;
-		nextChannelX = 0;
 		
 		faderContRect = Rect.new(0,0, initialGUIWidth, channelHeight);
 		buttonsContRect = Rect.new(0,channelHeight, initialGUIWidth, buttonHeight);
@@ -108,35 +108,34 @@ Poly {
 		window = Window.new("Poly", guiRect);
 		faderContainer = CompositeView(window, faderContRect);
 		buttonContainer = CompositeView(window, buttonsContRect);
-		buttonFlowLayout = buttonContainer.addFlowLayout;
-		
-		labelBoxRect = Rect(0,0,80,20);
-		divisionLabel = StaticText(buttonContainer, labelBoxRect).string = "Beat Division";
-		divisionBox = NumberBox(buttonContainer, labelBoxRect);
-		numberLabel = StaticText(buttonContainer, labelBoxRect).string = "Sub-Divisions";
-		numberBox = NumberBox(buttonContainer, labelBoxRect);
-		buttonFlowLayout.nextLine;
-		buttonFlowLayout.nextLine;
-		addButton = Button(buttonContainer, Rect(0,0,buttonHeight,buttonHeight));
+
+		divisionLabel = StaticText(buttonContainer, Rect(0,0,80,20)).string = "Beat Division";
+		divisionBox = NumberBox(buttonContainer, Rect(100,0,30,20)).clipLo_(1).value_(4);
+		numberLabel = StaticText(buttonContainer, Rect(0,30,80,20)).string = "Sub-Divisions";
+		numberBox = NumberBox(buttonContainer, Rect(100,30,30,20)).clipLo_(1).value_(4);
+		addButton = Button(buttonContainer, Rect(150,0,buttonHeight,buttonHeight));
+
 		addButton.states_([["Add", Color.white, Color.black]]);
 		addButton.action_({ 
-			this.addGUIChannel(4,3);
+			this.addRhythm(currentIndex, divisionBox.value.asInteger,numberBox.value.asInteger);
 		});
 						
 		window.front;
-
 	}
 	
-	addGUIChannel {|division, number|
+	addGUIChannel {|index, division, number|
+		var xPos;
+		Post << "ADD CHANNEL currentIndex: " <<  currentIndex << "\n"; 
+		Post << "index: " <<  index << "\n"; 
 		
-		if(nextChannelX>=initialGUIWidth) {			
+		xPos = index*channelWidth;
+		if(xPos>=initialGUIWidth) {			
 			[guiRect, faderContRect, buttonsContRect].do { |item, i|
-				item.width_(item.width+channelWidth);
+				item.width_(xPos);
 			};
 			window.bounds = guiRect;
 		};
-		EZSlider(faderContainer, Rect(nextChannelX, 0, channelWidth, channelHeight), "D: "++ division.asString ++ " N: "++ number, \db.asSpec.step_(0.01), initVal:1, unitWidth:25, numberWidth:25,layout:\vert);
-		this.nextChannelX = nextChannelX + channelWidth;		
+		EZSlider(faderContainer, Rect(xPos, 0, channelWidth, channelHeight), "D: "++ division.asString ++ " N: "++ number, \db.asSpec.step_(0.01), initVal:1, unitWidth:25, numberWidth:25,layout:\vert);
 	}
 	
 }
@@ -148,4 +147,7 @@ Poly {
 	-Limiter
 	-Divided Gain levels
 	-Create with 1-9 pre-made
+	-on close functionality
+	-Stop playing twice
+	-make faders work
 */
