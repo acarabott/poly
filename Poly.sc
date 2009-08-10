@@ -90,17 +90,10 @@ Poly {
 	
 	removeRhythm {|index|
 		this.removeGUIChannel(index);
-		Post << "index: " <<  index << "\n"; 
 		[faders, removeButtons, rhythms, amps, freqs].do { |item, i|
-			Post << "item: " <<  item << "\n"; 
-			/*item.removeAt(index);*/
-		};
-		[faders, removeButtons, rhythms, amps, freqs].do { |item, i|
-/*			Post << "item: " <<  item << "\n"; */
 			item.removeAt(index);
 		};
 		currentIndex = currentIndex - 1;
-		Post << "removeButtons: " <<  removeButtons << "\n"; 
 		
 	}
 		
@@ -165,9 +158,17 @@ Poly {
 		var fader;
 			
 		xPos = index*channelWidth;
-		if(xPos>=initialGUIWidth) {			
+		Post << "index: " <<  index << "\n"; 
+		
+		Post << "xPos: " <<  xPos << "\n"; 
+		Post << "xPos.class: " <<  xPos.class << "\n"; 
+		Post << "initialGUIWidth.class: " <<  initialGUIWidth.class << "\n"; 
+		
+		Post << "initialGUIWidth: " <<  initialGUIWidth << "\n"; 
+		if(xPos>=initialGUIWidth) {	
+			"hi".postln;		
 			[guiRect, faderContRect, buttonsContRect].do { |item, i|
-				item.width_(xPos);
+				item.width_(item.width+channelWidth);
 			};
 			window.bounds = guiRect;
 		};
@@ -186,6 +187,7 @@ Poly {
 		this.setRemoveButtonAction(removeButton, index);
 		removeButtons.add(removeButton);
 		
+		window.refresh;
 	}
 	
 	removeGUIChannel {|index|
@@ -219,13 +221,10 @@ Poly {
 		faders[(index+1)..(faders.size-1)].do { |item, i|
  			item.bounds = positions[i];
 		};		
-		
-		Post << "removeButtons: " <<  removeButtons << "\n"; 
-		
+				
 		removeButtons[(index+1)..(removeButtons.size-1)].do { |item, i|
 			this.setRemoveButtonAction(item, removeButtons.indexOf(item)-1)	
 		};
-		Post << "removeButtons: " <<  removeButtons << "\n"; 
 			
 	}
 	
@@ -249,15 +248,12 @@ Poly {
 
 /*
 	TODO 
-	-channels as a class?
-	-extending GUI size is 1 wrong
-	-shuffle along faders when previous removed (flowlayout?)
 	-tempo input
 	-When adding rhythms the default freq/MIDI value should be different to current values...
 	-Limiter
 	-Divided Gain levels
 	-Create with 1-9 pre-made
-	-on close functionality
 	-margin to containers
+	-channels as a class?
 	-make standalone
 */
