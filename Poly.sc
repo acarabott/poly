@@ -15,10 +15,13 @@ Poly {
 	var <>buttonsContRect;
 	
 	var <>guiRect;
+	var <>faderHeight;
 	var <>channelWidth;
 	var <>channelHeight;
 	var <>initialGUIWidth;
-	var <>buttonHeight;
+	var <>addButtonHeight;
+	var <>removeButtonHeight;
+	var <>faders;
 	
 	*initClass {
 		SynthDef(\polyBeep) { |freq=440, amp=0.1, out=0|
@@ -43,6 +46,7 @@ Poly {
 		rhythms = List[];
 		freqs = List[];
 		amps = List[];
+		faders = List[];
 		tempo = 1;
 		
 		this.createGUI;
@@ -53,7 +57,7 @@ Poly {
 		var beat;
 
 		freqs.add(440);
-		amps.add(0.1);
+		amps.add(1);
 		beat = (tempo/aDivision)*aValue;
 		ret = Routine {
 			inf.do {
@@ -83,28 +87,37 @@ Poly {
 		};
 	}
 	
-	removeRhythm {|index|
+	removeRhythm {|index|		
+		this.removeGUIChannel;
+		[faders, rhythms, amps, freqs].do { |item, i|
+			item.removeAt(index);
+		};
+		currentIndex = currentIndex - 1;
 		
 	}
-	
+		
 	createGUI {
 		var addButton;
+		var playButton;
+		var stopButton;
 		var labelBoxRect;
 		var divisionLabel;
 		var numberLabel;
 		var divisionBox;
 		var numberBox;
-		var buttonFlowLayout;
+		var playButtonRoutine;
 		
 		sBounds = Window.screenBounds;
+		faderHeight = 400;
+		removeButtonHeight = 20;
 		channelWidth = 50;
-		channelHeight = 400;
-		buttonHeight = 50;
+		channelHeight = faderHeight+removeButtonHeight;
+		addButtonHeight = 50;
 		initialGUIWidth = channelWidth * 5;
 		
 		faderContRect = Rect.new(0,0, initialGUIWidth, channelHeight);
-		buttonsContRect = Rect.new(0,channelHeight, initialGUIWidth, buttonHeight);
-		guiRect = Rect.new(sBounds.width*0.33, sBounds.height*0.33, initialGUIWidth, channelHeight+(buttonHeight*2));
+		buttonsContRect = Rect.new(0,channelHeight, initialGUIWidth, addButtonHeight*3);
+		guiRect = Rect.new(sBounds.width*0.33, sBounds.height*0.33, initialGUIWidth, channelHeight+buttonsContRect.height);
 		window = Window.new("Poly", guiRect);
 		faderContainer = CompositeView(window, faderContRect);
 		buttonContainer = CompositeView(window, buttonsContRect);
@@ -113,18 +126,36 @@ Poly {
 		divisionBox = NumberBox(buttonContainer, Rect(100,0,30,20)).clipLo_(1).value_(4);
 		numberLabel = StaticText(buttonContainer, Rect(0,30,80,20)).string = "Sub-Divisions";
 		numberBox = NumberBox(buttonContainer, Rect(100,30,30,20)).clipLo_(1).value_(4);
-		addButton = Button(buttonContainer, Rect(150,0,buttonHeight,buttonHeight));
+		addButton = Button(buttonContainer, Rect(150,0,addButtonHeight,addButtonHeight));
 
 		addButton.states_([["Add", Color.white, Color.black]]);
 		addButton.action_({ 
 			this.addRhythm(currentIndex, divisionBox.value.asInteger,numberBox.value.asInteger);
 		});
-						
+					
+		playButton = Button(buttonContainer, Rect(0,60,addButtonHeight,addButtonHeight));
+		playButton.states_([["Play", Color.black, Color.green], ["Stop", Color.black, Color.yellow]]);
+		playButtonRoutine = Routine {			
+			inf.do {
+				this.play;
+				0.yield;
+				this.stop;
+				0.yield
+			};
+		};
+		playButton.action_({ 
+			playButtonRoutine.value();
+		});		
+		window.onClose_({this.cleanUp});
 		window.front;
 	}
 	
 	addGUIChannel {|index, division, number|
 		var xPos;
+		var container;
+		var removeButton;
+		var fader;
+		
 		Post << "ADD CHANNEL currentIndex: " <<  currentIndex << "\n"; 
 		Post << "index: " <<  index << "\n"; 
 		
@@ -135,19 +166,60 @@ Poly {
 			};
 			window.bounds = guiRect;
 		};
-		EZSlider(faderContainer, Rect(xPos, 0, channelWidth, channelHeight), "D: "++ division.asString ++ " N: "++ number, \db.asSpec.step_(0.01), initVal:1, unitWidth:25, numberWidth:25,layout:\vert);
+		
+		container = CompositeView(faderContainer, Rect(xPos, 0, faderContRect.height, channelWidth));
+		fader = EZSlider(container, Rect(0, 0, channelWidth, faderHeight), "D: "++ division.asString ++ " N: "++ number, \db.asSpec.step_(0.01), initVal:1, unitWidth:25, numberWidth:25,layout:\vert);
+		fader.action_({|ez| 
+			var val = ez.value.dbamp;
+			amps[index] = val;
+		});
+
+		faders.add(
+			fader
+		);
+		
+		removeButton = Button(container, Rect(0,faderHeight, channelWidth, removeButtonHeight));
+		removeButton.states_([["Remove", Color.black, Color.red]]);
+		removeButton.action_({ 
+			this.removeRhythm(index);
+		});
+		
+		
 	}
 	
+	removeGUIChannel {|index|
+		var xPos;
+		xPos = currentIndex*channelWidth;
+
+		faders[index].remove;
+		if(xPos<=initialGUIWidth) {			
+			[guiRect, faderContRect, buttonsContRect].do { |item, i|
+				item.width_(initialGUIWidth);
+			};
+			window.bounds = guiRect;
+		};
+		window.refresh;	
+	}
+	
+	cleanUp {
+		this.stop();
+		rhythms = List[];
+		freqs = List[];
+		amps = List[];
+		faders = List[];
+	}
 }
 
 
 /*
 	TODO 
+	-tempo input
+	-fix fader removal
 	-When adding rhythms the default freq/MIDI value should be different to current values...
 	-Limiter
 	-Divided Gain levels
 	-Create with 1-9 pre-made
 	-on close functionality
-	-Stop playing twice
-	-make faders work
+	-margin to containers
+	-make standalone
 */
