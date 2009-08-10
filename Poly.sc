@@ -42,7 +42,6 @@ Poly {
 
 	init { 
 		currentIndex = 0;
-		Post << "INIT currentIndex: " <<  currentIndex << "\n"; 
 		rhythms = List[];
 		freqs = List[];
 		amps = List[];
@@ -66,7 +65,6 @@ Poly {
 			}
 		};
 		rhythms.add(ret);
-		Post << "ADD RHYTHM currentIndex: " <<  currentIndex << "\n"; 
 		
 		this.addGUIChannel(currentIndex, aDivision, aValue);
 		currentIndex = currentIndex + 1;
@@ -87,8 +85,8 @@ Poly {
 		};
 	}
 	
-	removeRhythm {|index|		
-		this.removeGUIChannel;
+	removeRhythm {|index|
+		this.removeGUIChannel(index);
 		[faders, rhythms, amps, freqs].do { |item, i|
 			item.removeAt(index);
 		};
@@ -155,10 +153,7 @@ Poly {
 		var container;
 		var removeButton;
 		var fader;
-		
-		Post << "ADD CHANNEL currentIndex: " <<  currentIndex << "\n"; 
-		Post << "index: " <<  index << "\n"; 
-		
+			
 		xPos = index*channelWidth;
 		if(xPos>=initialGUIWidth) {			
 			[guiRect, faderContRect, buttonsContRect].do { |item, i|
@@ -167,16 +162,14 @@ Poly {
 			window.bounds = guiRect;
 		};
 		
-		container = CompositeView(faderContainer, Rect(xPos, 0, faderContRect.height, channelWidth));
-		fader = EZSlider(container, Rect(0, 0, channelWidth, faderHeight), "D: "++ division.asString ++ " N: "++ number, \db.asSpec.step_(0.01), initVal:1, unitWidth:25, numberWidth:25,layout:\vert);
+		container = CompositeView(faderContainer, Rect(xPos, 0, channelWidth, faderContRect.height));
+		fader = EZSlider(container, Rect(0, 0, channelWidth, faderHeight), "D: "++ division.asString ++ " N: "++ number, \db.asSpec.step_(0.01), initVal:1, unitWidth:channelWidth, numberWidth:channelWidth, layout:\vert);
 		fader.action_({|ez| 
 			var val = ez.value.dbamp;
 			amps[index] = val;
 		});
 
-		faders.add(
-			fader
-		);
+		faders.add(container);
 		
 		removeButton = Button(container, Rect(0,faderHeight, channelWidth, removeButtonHeight));
 		removeButton.states_([["Remove", Color.black, Color.red]]);
@@ -213,8 +206,8 @@ Poly {
 
 /*
 	TODO 
+	-shuffle along faders when previous removed (flowlayout?)
 	-tempo input
-	-fix fader removal
 	-When adding rhythms the default freq/MIDI value should be different to current values...
 	-Limiter
 	-Divided Gain levels
