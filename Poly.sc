@@ -22,6 +22,7 @@ Poly {
 	var <>addButtonHeight;
 	var <>removeButtonHeight;
 	var <>faders;
+	var <>removeButtons;
 	
 	*initClass {
 		SynthDef(\polyBeep) { |freq=440, amp=0.1, out=0|
@@ -46,6 +47,7 @@ Poly {
 		freqs = List[];
 		amps = List[];
 		faders = List[];
+		removeButtons = List[];
 		tempo = 1;
 		
 		this.createGUI;
@@ -68,6 +70,7 @@ Poly {
 		
 		this.addGUIChannel(currentIndex, aDivision, aValue);
 		currentIndex = currentIndex + 1;
+		
 	}
 	
 	play {
@@ -87,10 +90,17 @@ Poly {
 	
 	removeRhythm {|index|
 		this.removeGUIChannel(index);
-		[faders, rhythms, amps, freqs].do { |item, i|
+		Post << "index: " <<  index << "\n"; 
+		[faders, removeButtons, rhythms, amps, freqs].do { |item, i|
+			Post << "item: " <<  item << "\n"; 
+			/*item.removeAt(index);*/
+		};
+		[faders, removeButtons, rhythms, amps, freqs].do { |item, i|
+/*			Post << "item: " <<  item << "\n"; */
 			item.removeAt(index);
 		};
 		currentIndex = currentIndex - 1;
+		Post << "removeButtons: " <<  removeButtons << "\n"; 
 		
 	}
 		
@@ -129,7 +139,7 @@ Poly {
 		addButton.states_([["Add", Color.white, Color.black]]);
 		addButton.action_({ 
 			this.addRhythm(currentIndex, divisionBox.value.asInteger,numberBox.value.asInteger);
-		});
+		}); 
 					
 		playButton = Button(buttonContainer, Rect(0,60,addButtonHeight,addButtonHeight));
 		playButton.states_([["Play", Color.black, Color.green], ["Stop", Color.black, Color.yellow]]);
@@ -173,10 +183,8 @@ Poly {
 		
 		removeButton = Button(container, Rect(0,faderHeight, channelWidth, removeButtonHeight));
 		removeButton.states_([["Remove", Color.black, Color.red]]);
-		removeButton.action_({ 
-			this.removeRhythm(index);
-		});
-		
+		this.setRemoveButtonAction(removeButton, index);
+		removeButtons.add(removeButton);
 		
 	}
 	
@@ -184,14 +192,41 @@ Poly {
 		var xPos;
 		xPos = currentIndex*channelWidth;
 
-		faders[index].remove;
 		if(xPos<=initialGUIWidth) {			
 			[guiRect, faderContRect, buttonsContRect].do { |item, i|
 				item.width_(initialGUIWidth);
 			};
 			window.bounds = guiRect;
 		};
+
+		if(index!=(faders.size-1)) {
+			this.shiftGUIChannels(index);
+		};
+		faders[index].remove;
 		window.refresh;	
+	}
+	
+	shiftGUIChannels {|index|
+		var positions = List[];
+		var addFunc;
+		var changeFunc;
+				
+		
+		faders[index..(faders.size-2)].do { |item, i|
+			positions.add(item.bounds)
+		};
+		
+		faders[(index+1)..(faders.size-1)].do { |item, i|
+ 			item.bounds = positions[i];
+		};		
+		
+		Post << "removeButtons: " <<  removeButtons << "\n"; 
+		
+		removeButtons[(index+1)..(removeButtons.size-1)].do { |item, i|
+			this.setRemoveButtonAction(item, removeButtons.indexOf(item)-1)	
+		};
+		Post << "removeButtons: " <<  removeButtons << "\n"; 
+			
 	}
 	
 	cleanUp {
@@ -201,11 +236,21 @@ Poly {
 		amps = List[];
 		faders = List[];
 	}
+	
+	setRemoveButtonAction {|item, newIndex|
+				
+		item.action_({
+			this.removeRhythm(newIndex);
+		});
+		
+	}
 }
 
 
 /*
 	TODO 
+	-channels as a class?
+	-extending GUI size is 1 wrong
 	-shuffle along faders when previous removed (flowlayout?)
 	-tempo input
 	-When adding rhythms the default freq/MIDI value should be different to current values...
