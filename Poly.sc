@@ -174,7 +174,8 @@ Poly {
 		var xPos;
 		var container;
 		var removeButton;
-		var fader;
+		var volFader;
+		var freqFader;
 			
 		xPos = index*channelWidth;
 
@@ -186,11 +187,16 @@ Poly {
 		};
 		
 		container = CompositeView(faderContainer, Rect(xPos, 0, channelWidth, faderContRect.height));
-		fader = EZSlider(container, Rect(0, 0, channelWidth, faderHeight), "D: "++ division.asString ++ " N: "++ number, \db.asSpec.step_(0.01), initVal:1, unitWidth:channelWidth, numberWidth:channelWidth, layout:\vert);
-		fader.action_({|ez| 
+		volFader = EZSlider(container, Rect(0, 0, channelWidth/2, faderHeight), division.asString ++ ")(" ++ number, \db.asSpec.step_(0.01), initVal:1, unitWidth:channelWidth/2, numberWidth:channelWidth/2, layout:\vert);
+		volFader.action_({|ez| 
 			var val = ez.value.dbamp;
 			amps[index] = val;
 		});
+		freqFader = EZSlider(container, Rect(channelWidth/2, 0, channelWidth/2, faderHeight), "Freq", \freq, initVal:440, unitWidth:channelWidth/2, numberWidth:channelWidth/2, layout:\vert);
+		freqFader.action_({|ez| 
+			freqs[index] = ez.value;
+		});
+		
 
 		faders.add(container);
 		
@@ -275,7 +281,6 @@ Poly {
 /*
 	TODO;
 	-making triplets work..
-	-changing tempo changes old routines...
 	-change sounds
 	-MIDI outpu
 	-When adding rhythms the default freq/MIDI value should be different to current values...
