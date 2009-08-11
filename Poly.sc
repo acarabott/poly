@@ -1,11 +1,14 @@
 Poly {
 	
 	var <>tempo;
+	var <>tempoList;
 	
 	var <>currentIndex;
 	var <>rhythms;
 	var <>freqs;
 	var <>amps;
+	var <>beatDivisions;
+	var <>divisionsPerNote;
 	
 	var <>sBounds;
 	var <>window;
@@ -23,6 +26,8 @@ Poly {
 	var <>removeButtonHeight;
 	var <>faders;
 	var <>removeButtons;
+	var <>tempoBox;
+	
 	
 	*initClass {
 		SynthDef(\polyBeep) { |freq=440, amp=0.1, out=0|
@@ -48,29 +53,30 @@ Poly {
 		amps = List[];
 		faders = List[];
 		removeButtons = List[];
-		tempo = 1;
+		tempoList = List[];
+		beatDivisions = List[];
+		divisionsPerNote = List[];
+		
+		tempo = 60;
 		
 		this.createGUI;
 	}
 	
-	addRhythm {|aIndex, aDivision, aValue|
+	createRhythm {|aIndex, aDivision, aValue|
 		var ret;
 		var beat;
 
 		freqs.add(440);
 		amps.add(1);
-		beat = (tempo/aDivision)*aValue;
+		beat = ((60/tempo)/aDivision)*aValue;
 		ret = Routine {
 			inf.do {
 				Synth(\polyBeep, [\freq, freqs[aIndex], \amp, amps[aIndex]]);
 				beat.wait
 			}
 		};
-		rhythms.add(ret);
 		
-		this.addGUIChannel(currentIndex, aDivision, aValue);
-		currentIndex = currentIndex + 1;
-		
+		^ret;		
 	}
 	
 	play {
@@ -89,11 +95,9 @@ Poly {
 	}
 	
 	removeRhythm {|index|
-		this.removeGUIChannel(index);
-		[faders, removeButtons, rhythms, amps, freqs].do { |item, i|
+		[faders, removeButtons, rhythms, amps, freqs, beatDivisions, divisionsPerNote, tempoList].do { |item, i|
 			item.removeAt(index);
 		};
-		currentIndex = currentIndex - 1;
 		
 	}
 		
@@ -104,6 +108,7 @@ Poly {
 		var labelBoxRect;
 		var divisionLabel;
 		var numberLabel;
+		var tempoLabel;
 		var divisionBox;
 		var numberBox;
 		var playButtonRoutine;
@@ -124,20 +129,34 @@ Poly {
 		buttonContainer = CompositeView(window, buttonsContRect);
 
 		divisionLabel = StaticText(buttonContainer, Rect(0,0,80,20)).string = "Beat Division";
-		divisionBox = NumberBox(buttonContainer, Rect(100,0,30,20)).clipLo_(1).value_(4);
+		divisionBox = NumberBox(buttonContainer, Rect(100,0,30,20)).clipLo_(1).value_(4).scroll_(false);
 		numberLabel = StaticText(buttonContainer, Rect(0,30,80,20)).string = "Sub-Divisions";
-		numberBox = NumberBox(buttonContainer, Rect(100,30,30,20)).clipLo_(1).value_(4);
+		numberBox = NumberBox(buttonContainer, Rect(100,30,30,20)).clipLo_(1).value_(4).scroll_(false);
+		tempoLabel = StaticText(buttonContainer, Rect(0,60,80,20)).string_("Tempo");
+		tempoBox = NumberBox(buttonContainer, Rect(100,60,30,20)).clipLo_(1).value_(60).scroll_(false);
+		
 		addButton = Button(buttonContainer, Rect(150,0,addButtonHeight,addButtonHeight));
 
 		addButton.states_([["Add", Color.white, Color.black]]);
-		addButton.action_({ 
-			this.addRhythm(currentIndex, divisionBox.value.asInteger,numberBox.value.asInteger);
+		addButton.action_({
+			tempo = tempoBox.value();
+			tempoList.add(tempo);
+			this.correctTempos();
+			rhythms.add(
+				this.createRhythm(currentIndex, divisionBox.value, numberBox.value);
+			);
+			beatDivisions.add(divisionBox.value);
+			divisionsPerNote.add(numberBox.value);
+			this.addGUIChannel(currentIndex, divisionBox.value, numberBox.value);
+			currentIndex = currentIndex + 1;
 		}); 
 					
-		playButton = Button(buttonContainer, Rect(0,60,addButtonHeight,addButtonHeight));
+		playButton = Button(buttonContainer, Rect(150,60,addButtonHeight,addButtonHeight));
 		playButton.states_([["Play", Color.black, Color.green], ["Stop", Color.black, Color.yellow]]);
 		playButtonRoutine = Routine {			
 			inf.do {
+				tempo = tempoBox.value();
+				this.correctTempos();
 				this.play;
 				0.yield;
 				this.stop;
@@ -145,7 +164,7 @@ Poly {
 			};
 		};
 		playButton.action_({ 
-			playButtonRoutine.value();
+			playButtonRoutine.value();			
 		});		
 		window.onClose_({this.cleanUp});
 		window.front;
@@ -158,15 +177,8 @@ Poly {
 		var fader;
 			
 		xPos = index*channelWidth;
-		Post << "index: " <<  index << "\n"; 
-		
-		Post << "xPos: " <<  xPos << "\n"; 
-		Post << "xPos.class: " <<  xPos.class << "\n"; 
-		Post << "initialGUIWidth.class: " <<  initialGUIWidth.class << "\n"; 
-		
-		Post << "initialGUIWidth: " <<  initialGUIWidth << "\n"; 
+
 		if(xPos>=initialGUIWidth) {	
-			"hi".postln;		
 			[guiRect, faderContRect, buttonsContRect].do { |item, i|
 				item.width_(item.width+channelWidth);
 			};
@@ -239,16 +251,33 @@ Poly {
 	setRemoveButtonAction {|item, newIndex|
 				
 		item.action_({
+			this.removeGUIChannel(newIndex);
 			this.removeRhythm(newIndex);
+			currentIndex = currentIndex - 1;
 		});
 		
 	}
+	
+	correctTempos {		
+		if((tempoList.size==1) || (tempoList.asSet.size>1)) {
+			tempoList.do { |item, i|
+				if(item!=tempo) {
+					rhythms[i] = this.createRhythm(i, beatDivisions[i], divisionsPerNote[i]);
+					tempoList[i] = tempo;
+				};
+			};
+		};
+	}
+
 }
 
 
 /*
-	TODO 
-	-tempo input
+	TODO;
+	-making triplets work..
+	-changing tempo changes old routines...
+	-change sounds
+	-MIDI outpu
 	-When adding rhythms the default freq/MIDI value should be different to current values...
 	-Limiter
 	-Divided Gain levels
@@ -256,4 +285,8 @@ Poly {
 	-margin to containers
 	-channels as a class?
 	-make standalone
+	-comment, lol
+	-organise variables
+	-rename divisions/numbers beatDivisions/divisionsPerNote 
+	-using class variable for tempo..... bad skills man...pass a value around.
 */
