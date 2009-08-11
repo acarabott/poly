@@ -295,6 +295,7 @@ Poly {
 	-channels as a class?
 	-make standalone
 	-comment, lol
+	-create README
 	-organise variables
 	-rename divisions/numbers beatDivisions/divisionsPerNote 
 	-using class variable for tempo..... bad skills man?...pass a value around.
