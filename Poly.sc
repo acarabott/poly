@@ -116,7 +116,7 @@ Poly {
 		sBounds = Window.screenBounds;
 		faderHeight = 400;
 		removeButtonHeight = 20;
-		channelWidth = 50;
+		channelWidth = 80;
 		channelHeight = faderHeight+removeButtonHeight;
 		addButtonHeight = 50;
 		initialGUIWidth = channelWidth * 5;
@@ -139,7 +139,7 @@ Poly {
 
 		addButton.states_([["Add", Color.white, Color.black]]);
 		addButton.action_({
-			tempo = tempoBox.value();
+			tempo = tempoBox.value;
 			tempoList.add(tempo);
 			this.correctTempos();
 			rhythms.add(
@@ -155,7 +155,7 @@ Poly {
 		playButton.states_([["Play", Color.black, Color.green], ["Stop", Color.black, Color.yellow]]);
 		playButtonRoutine = Routine {			
 			inf.do {
-				tempo = tempoBox.value();
+				tempo = tempoBox.value;
 				this.correctTempos();
 				this.play;
 				0.yield;
@@ -187,7 +187,7 @@ Poly {
 		};
 		
 		container = CompositeView(faderContainer, Rect(xPos, 0, channelWidth, faderContRect.height));
-		volFader = EZSlider(container, Rect(0, 0, channelWidth/2, faderHeight), division.asString ++ ")(" ++ number, \db.asSpec.step_(0.01), initVal:1, unitWidth:channelWidth/2, numberWidth:channelWidth/2, layout:\vert);
+		volFader = EZSlider(container, Rect(0, 0, channelWidth/2, faderHeight), "d:" ++ division.asString ++ " " ++ "n:" ++ number.asString, \db.asSpec.step_(0.01), initVal:1, unitWidth:channelWidth/2, numberWidth:channelWidth/2, layout:\vert);
 		volFader.action_({|ez| 
 			var val = ez.value.dbamp;
 			amps[index] = val;
@@ -264,8 +264,9 @@ Poly {
 		
 	}
 	
-	correctTempos {		
-		if((tempoList.size==1) || (tempoList.asSet.size>1)) {
+	correctTempos {	
+		var listAsSet = tempoList.asSet;
+		if((tempoList.size==1) || (listAsSet.size>1) || ((listAsSet.size==1) && (listAsSet.includes(tempo).not))) {
 			tempoList.do { |item, i|
 				if(item!=tempo) {
 					rhythms[i] = this.createRhythm(i, beatDivisions[i], divisionsPerNote[i]);
@@ -280,18 +281,21 @@ Poly {
 
 /*
 	TODO;
-	-making triplets work..
-	-change sounds
-	-MIDI outpu
+	
+	Functionality:
+	-padding between faders
+	-MIDI output
 	-When adding rhythms the default freq/MIDI value should be different to current values...
 	-Limiter
 	-Divided Gain levels
 	-Create with 1-9 pre-made
 	-margin to containers
+	
+	Code:
 	-channels as a class?
 	-make standalone
 	-comment, lol
 	-organise variables
 	-rename divisions/numbers beatDivisions/divisionsPerNote 
-	-using class variable for tempo..... bad skills man...pass a value around.
+	-using class variable for tempo..... bad skills man?...pass a value around.
 */
